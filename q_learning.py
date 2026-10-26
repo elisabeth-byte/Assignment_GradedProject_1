@@ -132,3 +132,53 @@ class QLearningAgent:
             total_reward += reward
 
         return total_reward
+
+    # ==============================================================
+    # RANDOM POLICY
+    # ==============================================================
+
+    def evaluate_random(self):
+
+        state = self.env.reset()
+
+        total_reward = 0
+
+        done = False
+
+        while not done:
+
+            action = self.rng.randrange(2)
+
+            state, reward, done = self.env.step(action)
+
+            total_reward += reward
+
+        return total_reward
+
+    # ==============================================================
+    # RULE-BASED POLICY
+    # ==============================================================
+
+    def evaluate_rule_based(self):
+
+        state = self.env.reset()
+
+        total_reward = 0
+
+        done = False
+
+        while not done:
+
+            hour, battery, price = state
+
+            # Charge if price is low and battery below 80%
+            if price == 0 and battery < 8:
+                action = 1
+            else:
+                action = 0
+
+            state, reward, done = self.env.step(action)
+
+            total_reward += reward
+
+        return total_reward
