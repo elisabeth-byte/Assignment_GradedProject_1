@@ -55,6 +55,11 @@ class EVChargingEnv:
             # Pay electricity cost
             reward -= PRICES[self.price]
 
+        # Penalty for being below 80%
+        #Reward shaping
+        if self.battery < 8:
+            reward -= (8 - self.battery)
+
         # Advance time
         self.hour += 1
 
@@ -63,9 +68,9 @@ class EVChargingEnv:
         # Final reward at end of day
         if done:
             if self.battery >= 8:
-                reward += 50
+                reward += 80 + 10 * (self.battery - 8)
             else:
-                reward -= 100
+                reward -= 20 * (8 - self.battery)
 
         # New electricity price for next hour
         if not done:

@@ -1,25 +1,25 @@
 # ==============================================================
-# PARAMETERS TO EXPERIMENT WITH
+# TRAINING
 # ==============================================================
 
-EPISODES = 500
+EPISODES = 20000
 
 # Which episodes should be shown in detail?
 # Examples:
 #     "1,2,goal,500"
 #     "1,10,100"
-WATCH = f"1,2,goal,{EPISODES}"
+#WATCH = f"1,2,goal,{EPISODES}"
 
 # Q-learning parameters
 ALPHA = 0.1       # learning rate
-GAMMA = 0.2       # importance of future rewards
-EPSILON = 0.5     # probability of exploring
+GAMMA = 0.95       # importance of future rewards
+EPSILON = 1.0     # probability of exploring
 
 # Maximum number of steps in one episode
-MAXSTEPS = 100
+#MAXSTEPS = 100
 
 # Seconds between displayed steps
-DELAY = 0.3
+#DELAY = 0.3
 
 
 # Controls the random choices, making experiments

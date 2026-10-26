@@ -1,169 +1,134 @@
 import random
 import numpy as np
+
 from parameters import (
     ALPHA,
     EPSILON,
     GAMMA,
-    MAXSTEPS,
     SEED,
 )
-from world import (
-    GOAL,
-    START,
-    SIZE,
-    step,
-)
+
+from world import EVChargingEnv
 
 
 class QLearningAgent:
-    def __init__(self, seed=SEED):
-        self.q = np.zeros((5, 5, 4))
 
-        # Random generator used for exploration.
+    def __init__(self, seed=SEED):
+
+        self.env = EVChargingEnv(seed)
+
+        # Q-table dimensions:
+        # hour (24)
+        # battery (11)
+        # price (3)
+        # action (2)
+        self.q = np.zeros((24, 11, 3, 2))
+
         self.rng = random.Random(seed)
 
-        # Store the result of each episode.
         self.history = []
-        #Epsilon - Decay
-        #self.epsilon = EPSILON
+
+        # Epsilon decay
+        self.epsilon = EPSILON
 
     # ==============================================================
     # ACTION SELECTION
     # ==============================================================
+
     def choose(self, state):
-        """
-        Choose an action using epsilon-greedy selection.
-        With probability EPSILON:
-            explore = choose a random action
-        Otherwise:
-            exploit = choose the best known action
-        """
 
-        # ----------------------------------------------------------
-        # EXPLORE
-        # ----------------------------------------------------------
-        if self.rng.random() < EPSILON:
-        #if self.rng.random() < self.epsilon: #Epsilon - Decay
-           return self.rng.randrange(4), True
+        # Explore
+        if self.rng.random() < self.epsilon:
+            return self.rng.randrange(2), True
 
-        # ----------------------------------------------------------
-        # EXPLOIT
-        # ----------------------------------------------------------
+        # Exploit
         values = self.q[state]
+
         best_actions = [
             action
-            for action in range(4)
+            for action in range(2)
             if values[action] == values.max()
         ]
 
         return self.rng.choice(best_actions), False
 
+    # ==============================================================
+    # ONE TRAINING EPISODE
+    # ==============================================================
 
     def episode(self):
-        """
-        Run one episode of Q-learning.
-        This is the central algorithm.
-        """
-        state = START
-        step_number = 0
+
+        state = self.env.reset()
+
         done = False
-        outcome = "step limit"
 
-        # ----------------------------------------------------------
-        # REPEAT UNTIL THE EPISODE ENDS
-        # ----------------------------------------------------------
-        while not done and step_number < MAXSTEPS:
+        total_reward = 0
+
+        while not done:
+
             action, explored = self.choose(state)
-            next_state, reward, done = step(
-                state,
-                action,
-            )
-            #if not done:
-            #    reward -= 0.1
 
-            # ------------------------------------------------------
-            # Q-LEARNING UPDATE
-            # -----------------------------------------------------
+            next_state, reward, done = self.env.step(action)
+
             old = self.q[state][action]
-            best_next = self.q[next_state].max()
+
+            if done:
+                best_next = 0
+            else:
+                best_next = self.q[next_state].max()
+
             new = old + ALPHA * (
                 reward
                 + GAMMA * best_next
                 - old
             )
+
             self.q[state][action] = new
 
-            # ------------------------------------------------------
-            # CHECK WHETHER THE EPISODE ENDED
-            # ------------------------------------------------------
-            step_number += 1
-            if done:
-                if next_state == GOAL:
-                    outcome = "goal"
-                else:
-                    outcome = "pit"
+            total_reward += reward
+
             state = next_state
-        self.history.append((step_number, outcome))
 
-        return outcome
+        self.history.append(total_reward)
 
+        return total_reward
 
     # ==============================================================
     # TRAINING
     # ==============================================================
+
     def train(self, episodes):
+
         for _ in range(episodes):
+
             self.episode()
 
-            # Epsilon_decay
-           # self.epsilon = max(
-             #   0.01,
-            #    self.epsilon * 0.995
-            #)
-    # ==============================================================
-    # TEST THE CURRENT POLICY
-    # ==============================================================
-    def will_reach_goal(self):
-        """
-        Test whether the next episode reaches the goal.
-        Everything is restored afterwards, so this test does not
-        change the actual learning.
-        """
-        saved_q = self.q.copy()
-        saved_rng = self.rng.getstate()
-        saved_history = list(self.history)
-
-        outcome = self.episode()
-
-        self.q = saved_q
-        self.rng.setstate(saved_rng)
-        self.history = saved_history
-
-        return outcome == "goal"
-
+            # ε-decay
+            self.epsilon = max(
+                0.01,
+                self.epsilon * 0.995
+            )
 
     # ==============================================================
-    # GREEDY PATH
+    # GREEDY EVALUATION
     # ==============================================================
-    def greedy_path(self):
-        """
-        Follow the best-known action from START.
-        This shows what the agent has learned after training.
-        """
-        path = [START]
-        state = START
 
-        for _ in range(SIZE * SIZE):
+    def evaluate(self):
+
+        state = self.env.reset()
+
+        total_reward = 0
+
+        done = False
+
+        while not done:
+
             action = int(
                 self.q[state].argmax()
             )
-            state, _, done = step(
-                state,
-                action,
-            )
-            path.append(state)
-            if done:
-                break
 
-        return path
-    
+            state, reward, done = self.env.step(action)
+
+            total_reward += reward
+
+        return total_reward
