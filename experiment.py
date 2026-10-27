@@ -1,110 +1,135 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 from parameters import EPISODES
 from q_learning import QLearningAgent
-from world import GOAL, shortest_path_len
 
-
-# Seeds used for each experiment
+# Seeds used to evaluate robustness across different random runs
 SEEDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
-first_goals = []
-goals = []
-pits = []
-step_limits = []
-greedy_lengths = []
+# Number of evaluation episodes per policy
+N_EVAL_EPISODES = 100
 
+# Evaluate a policy multiple times and return the average reward
+def average_evaluation(agent, method, n=N_EVAL_EPISODES):
 
+    rewards = []
+
+    for _ in range(n):
+        rewards.append(method())
+
+    return np.mean(rewards)
+
+# Store evaluation results
+q_results = []
+rule_results = []
+random_results = []
+
+# Train and evaluate one agent for each seed
 for seed in SEEDS:
+
+    # Create a new agent with a reproducible random seed
     agent = QLearningAgent(seed=seed)
+
+    # Train the agent using Q-learning
     agent.train(EPISODES)
 
-    # Find the first episode that reached the goal
-    first_goal = None
-
-    for episode_number, (_, outcome) in enumerate(agent.history, start=1):
-        if outcome == "goal":
-            first_goal = episode_number
-            break
-
-    # Count outcomes
-    goal_count = sum(
-        outcome == "goal"
-        for _, outcome in agent.history
+    # Evaluate the learned greedy policy
+    q_reward = average_evaluation(
+        agent,
+        agent.evaluate
     )
 
-    pit_count = sum(
-        outcome == "pit"
-        for _, outcome in agent.history
+    # Evaluate the rule-based baseline policy
+    rule_reward = average_evaluation(
+        agent,
+        agent.evaluate_rule_based
     )
 
-    step_limit_count = sum(
-        outcome == "step limit"
-        for _, outcome in agent.history
+    # Evaluate the random baseline policy
+    random_reward = average_evaluation(
+        agent,
+        agent.evaluate_random
     )
 
-    # Final greedy path
-    path = agent.greedy_path()
+    # Store results for statistical analysis
+    q_results.append(q_reward)
+    rule_results.append(rule_reward)
+    random_results.append(random_reward)
 
-    if path[-1] == GOAL:
-        greedy_length = len(path) - 1
-    else:
-        greedy_length = None
-
-    # Save results
-    if first_goal is not None:
-        first_goals.append(first_goal)
-
-    goals.append(goal_count)
-    pits.append(pit_count)
-    step_limits.append(step_limit_count)
-
-    if greedy_length is not None:
-        greedy_lengths.append(greedy_length)
-
-    # Show each seed
+    # Print results for the current seed
     print(
         f"Seed {seed}: "
-        f"first goal = {first_goal}, "
-        f"goals = {goal_count}, "
-        f"pits = {pit_count}, "
-        f"step limits = {step_limit_count}, "
-        f"greedy path = {greedy_length}"
+        f"Q-learning = {q_reward:.1f}, "
+        f"Rule-based = {rule_reward:.1f}, "
+        f"Random = {random_reward:.1f}"
     )
 
 
 # ==============================================================
-# SUMMARY
+# SUMMARY STATISTICS
+# ==============================================================
+print("\nRESULTS")
+print("--------------------------------")
+
+print(
+    f"Q-learning: "
+    f"{np.mean(q_results):.2f} ± {np.std(q_results):.2f}"
+)
+
+print(
+    f"Rule-based: "
+    f"{np.mean(rule_results):.2f} ± {np.std(rule_results):.2f}"
+)
+
+print(
+    f"Random: "
+    f"{np.mean(random_results):.2f} ± {np.std(random_results):.2f}"
+)
+
+
+# ==============================================================
+# POLICY COMPARISON PLOT
 # ==============================================================
 
-print("\nRESULTS")
-print("----------------------------")
+methods = ["Q-learning", "Rule-based", "Random"]
 
-print(
-    f"First goal: "
-    f"{np.mean(first_goals):.1f} +/- {np.std(first_goals):.1f} episodes"
+# Average reward for each policy
+means = [
+    np.mean(q_results),
+    np.mean(rule_results),
+    np.mean(random_results),
+]
+
+# Standard deviation used as error bars
+stds = [
+    np.std(q_results),
+    np.std(rule_results),
+    np.std(random_results),
+]
+
+plt.figure(figsize=(8, 5))
+
+colors = [
+    "tab:blue",
+    "tab:orange",
+    "tab:green"
+]
+
+plt.bar(
+    methods,
+    means,
+    yerr=stds,
+    capsize=5,
+    color=colors,
 )
 
-print(
-    f"Goals: "
-    f"{np.mean(goals):.1f} +/- {np.std(goals):.1f}"
-)
+plt.ylabel("Average reward")
+plt.title("Policy Comparison")
+plt.grid(axis="y", linestyle="--", alpha=0.4)
 
-print(
-    f"Pits: "
-    f"{np.mean(pits):.1f} +/- {np.std(pits):.1f}"
-)
+plt.tight_layout()
 
-print(
-    f"Step limits: "
-    f"{np.mean(step_limits):.1f} +/- {np.std(step_limits):.1f}"
-)
-
-print(
-    f"Greedy path: "
-    f"{np.mean(greedy_lengths):.1f} +/- {np.std(greedy_lengths):.1f} steps"
-)
-
-print(
-    f"Shortest possible path: {shortest_path_len()} steps"
-)
+#plt.show()
+plt.savefig("policy_comparison.png")
+plt.close()

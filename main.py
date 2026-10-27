@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 
 from parameters import EPISODES
 from q_learning import QLearningAgent
@@ -8,19 +9,19 @@ def main():
 
     agent = QLearningAgent()
 
+    # Train the agent using Q-learning
     print("Training started...")
     agent.train(EPISODES)
 
     print("Training finished.")
-    print(agent.history[-10:])
 
     score = agent.evaluate()
 
+    # Prints greedy evaluation reward and final epsilon
     print(f"Greedy evaluation reward: {score:.2f}")
-
     print(f"Final epsilon: {agent.epsilon:.4f}")
 
-    # LÆRING-KURVE
+    # Plot the reward the agent obtained in each episode
     plt.figure(figsize=(10, 5))
     plt.plot(agent.history)
 
@@ -30,17 +31,13 @@ def main():
 
     plt.grid(True)
 
-    #plt.savefig("learning_curve.png")
-    #plt.close()
-    plt.show()
+    plt.savefig("learning_curve.png")
+    plt.close()
+    #plt.show()
+    print("Learning curve saved as learning_curve.png")
 
-    #print("Learning curve saved as learning_curve.png")
-
-    # MOVING AVERAGE LEARNING CURVE
-    import numpy as np
-
+    # Smooth the learning curve using a 100-episode moving average
     window = 100
-
     moving_avg = np.convolve(
         agent.history,
         np.ones(window) / window,
@@ -55,30 +52,44 @@ def main():
     plt.title("Learning curve (100-episode moving average)")
 
     plt.grid(True)
-    plt.show()
+    plt.savefig("learning_curve_moving_average.png")
+    plt.close()
+    #plt.show()
 
-    q_reward = agent.evaluate()
-    random_reward = agent.evaluate_random()
-    rule_reward = agent.evaluate_rule_based()
+    print("\nPOLICY ANALYSIS")
+    print("--------------------------------")
 
-    print()
-    print(f"Q-learning reward: {q_reward:.2f}")
-    print(f"Random policy reward: {random_reward:.2f}")
-    print(f"Rule-based reward: {rule_reward:.2f}")
-'''
-    print()
-    print("State (22,3,2):", agent.q[22, 3, 2])
-    print("State (10,9,2):", agent.q[10, 9, 2])
-    print("State (10,3,0):", agent.q[10, 3, 0])
-    print("State (20,3,0):", agent.q[20, 3, 0])
-    print("State (20,3,2):", agent.q[20, 3, 2])
+    # Example states used to inspect the learned policy
+    test_states = [
+        (0, 2, 0),    # early, low battery, low price
+        (0, 7, 2),    # early, high battery, high price
+        (12, 3, 0),   # midday, low battery, low price
+        (12, 7, 2),   # midday, battery near target, high price
+        (22, 7, 0),   # late, near target, low price
+        (22, 9, 2),   # late, high battery, high price
+        (22, 3, 0),  # late, low battery, low price
+        (21, 3, 0),  # late, low battery, low price
+        (20, 3, 0),  # late, low battery, low price
+        (19, 3, 0),  # late, low battery, low price
+    ]
 
-    print("State (22,7,0):", agent.q[22, 7, 0])
-    print("State (22,7,2):", agent.q[22, 7, 2])
-    print("State (0, 2, 0):", agent.q[0, 2, 0])
-    print("State (0, 3, 0):", agent.q[0, 3, 0])
-    print("State (0, 4, 0):", agent.q[0, 4, 0])
-'''
+    for state in test_states:
+
+        # Select the greedy action learned for this state
+        action = int(agent.q[state].argmax())
+
+        # Convert action index to a readable label
+        action_name = (
+            "Charge"
+            if action == 1
+            else "Do not charge"
+        )
+
+        print(
+            f"State {state}: "
+            f"{action_name} "
+            f"Q-values = {agent.q[state]}"
+        )
 
 if __name__ == "__main__":
     main()

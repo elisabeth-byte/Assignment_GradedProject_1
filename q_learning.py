@@ -77,6 +77,7 @@ class QLearningAgent:
             else:
                 best_next = self.q[next_state].max()
 
+            # Standard Q-learning update rule
             new = old + ALPHA * (
                 reward
                 + GAMMA * best_next
@@ -89,6 +90,7 @@ class QLearningAgent:
 
             state = next_state
 
+        # Store episode reward for learning curve visualization
         self.history.append(total_reward)
 
         return total_reward
@@ -103,7 +105,7 @@ class QLearningAgent:
 
             self.episode()
 
-            # ε-decay
+            # ε-decay, gradually reduce during training
             self.epsilon = max(
                 0.01,
                 self.epsilon * 0.995
@@ -134,7 +136,7 @@ class QLearningAgent:
         return total_reward
 
     # ==============================================================
-    # RANDOM POLICY
+    # RANDOM POLICY EVALUATION
     # ==============================================================
 
     def evaluate_random(self):

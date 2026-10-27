@@ -22,13 +22,11 @@ class EVChargingEnv:
         self.rng = random.Random(seed)
 
     def reset(self):
-        """
-        Start a new day.
-        """
 
+        ## Start a new day.
         self.hour = 0
 
-        # Start between 20% and 80% charge
+        # Start with a random battery level between 20% and 80%
         self.battery = self.rng.randint(2, 8)
 
         # Random electricity price
@@ -55,8 +53,7 @@ class EVChargingEnv:
             # Pay electricity cost
             reward -= PRICES[self.price]
 
-        # Penalty for being below 80%
-        #Reward shaping
+        # Reward shaping: penalize battery levels below 80%
         if self.battery < 8:
             reward -= (8 - self.battery)
 
@@ -65,7 +62,7 @@ class EVChargingEnv:
 
         done = self.hour >= MAX_HOUR
 
-        # Final reward at end of day
+        # Final reward based on how close the battery is to the target level
         if done:
             if self.battery >= 8:
                 reward += 80 + 10 * (self.battery - 8)
@@ -76,6 +73,7 @@ class EVChargingEnv:
         if not done:
             self.price = self.rng.randint(0, 2)
 
+        # State = (hour, battery_level, price_level)
         next_state = (
             self.hour,
             self.battery,
